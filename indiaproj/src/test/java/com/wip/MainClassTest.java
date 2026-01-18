@@ -31,9 +31,10 @@ public class MainClassTest {
 
 	@Test
 	public void testMultiply() {
-		System.out.println("From multiply method");
-		assertEquals(100, mc.multiply(10, 20));
+	    System.out.println("From multiply method");
+	    assertEquals(200, mc.multiply(10, 20));
 	}
+
 
 	@After
 	public void tearDown() {
