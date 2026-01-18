@@ -1,14 +1,14 @@
 pipeline {
   agent any
   tools {
-    jdk 'Java17'
+    jdk 'Java 17'
     maven 'Maven'
   }
   stages {
     stage('Checkout Code') {
       steps {
         echo 'Pulling from Github'
-        git branch: 'main', credentialsId: 'mygithubcred', url: 'https://github.com/chntraining/wipjen.git'
+        git branch: 'main', credentialsId: 'git_cred', url: 'https://github.com/Jayanth-N-Murthy/wipjen.git'
       }
     }
     stage('Test Code') {
