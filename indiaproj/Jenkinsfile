@@ -1,88 +1,91 @@
 pipeline {
-    agent any
+  agent any
 
-    tools {
-        jdk 'Java 17'
-        maven 'Maven'
+  tools {
+    jdk 'Java 17'
+    maven 'Maven'
+  }
+
+  stages {
+
+    stage('Checkout Code') {
+      steps {
+        echo 'Pulling from Github'
+        git branch: 'main',
+            credentialsId: 'git_cred',
+            url: 'https://github.com/Jayanth-N-Murthy/wipjen.git'
+      }
     }
 
-    stages {
-
-        stage('Checkout Code') {
-            steps {
-                echo 'Pulling from Github'
-                git branch: 'main',
-                    credentialsId: 'git_cred',
-                    url: 'https://github.com/Jayanth-N-Murthy/wipjen.git'
-            }
+    stage('Test Code') {
+      steps {
+        dir('indiaproj') {
+          echo 'JUNIT Test case execution started'
+          bat 'mvn clean test'
         }
-
-        stage('Test Code') {
-            steps {
-                echo 'JUNIT Test case execution started'
-                bat 'mvn clean test'
-            }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
-                }
-            }
+      }
+      post {
+        always {
+          junit 'indiaproj/target/surefire-reports/*.xml'
+          echo 'Test stage completed'
         }
+      }
+    }
 
-        stage('Build Project') {
-            steps {
-                echo 'Building Java project'
-                bat 'mvn clean package -DskipTests'
-            }
+    stage('Build Project') {
+      steps {
+        dir('indiaproj') {
+          echo 'Building Java project'
+          bat 'mvn clean package -DskipTests'
         }
+      }
+    }
 
-        stage('Build the Docker Image') {
-            steps {
-                echo 'Building Docker Image'
-                bat 'docker build -t myindiaproj:1.0 .'
-            }
+    stage('Build Docker Image') {
+      steps {
+        dir('indiaproj') {
+          echo 'Building Docker Image'
+          bat 'docker build -t jayanthn1/indiaproj:1.0 .'
         }
+      }
+    }
 
-        stage('Push Docker Image to DockerHub') {
-            steps {
-                echo 'Pushing Docker Image to DockerHub'
-                withCredentials([usernamePassword(
-                    credentialsId: 'Docker_id',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
-                )]) {
-                    bat '''
-                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                    docker tag myindiaproj:1.0 jayanthn1/myindiaproj:1.0
-                    docker push jayanthn1/myindiaproj:1.0
-                    '''
-                }
-            }
+    stage('Push Docker Image to DockerHub') {
+      steps {
+        echo 'Pushing Docker Image'
+        withCredentials([string(credentialsId: 'Docker_id', variable: 'DOCKER_PASS')]) {
+          bat '''
+            echo %DOCKER_PASS% | docker login -u jayanthn1 --password-stdin
+            docker push jayanthn1/indiaproj:1.0
+          '''
         }
+      }
+    }
 
-            stage('Deploy Project to K8s') {
-  steps {
-    dir('indiaproj') {
-      echo 'Deploying Java project to Kubernetes'
-      bat '''
-        minikube start
+    stage('Deploy Project to K8s') {
+      steps {
+        dir('indiaproj') {
+          echo 'Deploying Java project to Kubernetes'
+          bat '''
+            minikube start
+            kubectl apply -f k8s/deployment.yaml
+            kubectl apply -f k8s/services.yaml
+            kubectl get pods
+            kubectl get services
+          '''
+        }
+      }
+    }
 
-        kubectl apply -f k8s/deployment.yaml
-        kubectl apply -f k8s/services.yaml
+  } // end stages
 
-        kubectl get pods
-        kubectl get services
-      '''
+  post {
+    success {
+      echo 'BUILD & DEPLOY SUCCESSFUL'
+    }
+    failure {
+      echo 'OOPS!!! FAILURE '
     }
   }
-}
 
-    post {
-        success {
-            echo 'BUILD, PUSH & DEPLOY SUCCESSFUL!'
-        }
-        failure {
-            echo 'OOPS!!! Failure.'
-        }
-    }
-}
+} 
