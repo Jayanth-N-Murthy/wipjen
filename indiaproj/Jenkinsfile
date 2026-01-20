@@ -50,17 +50,24 @@ pipeline {
       }
     }
 
-    stage('Push Docker Image to DockerHub') {
-      steps {
-        echo 'Pushing Docker Image'
-        withCredentials([string(credentialsId: 'Docker_id', variable: 'DOCKER_PASS')]) {
-          bat '''
-            echo %DOCKER_PASS% | docker login -u jayanthn1 --password-stdin
-            docker push jayanthn1/indiaproj:1.0
-          '''
-        }
-      }
+   stage('Push Docker Image to DockerHub') {
+  steps {
+    echo 'Pushing Docker Image to DockerHub'
+
+    withCredentials([
+      usernamePassword(
+        credentialsId: 'Docker_id',
+        usernameVariable: 'DOCKER_USER',
+        passwordVariable: 'DOCKER_PASS'
+      )
+    ]) {
+      bat '''
+        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+        docker push jayanthn1/indiaproj:1.0
+      '''
     }
+  }
+}
 
     stage('Deploy Project to K8s') {
       steps {
