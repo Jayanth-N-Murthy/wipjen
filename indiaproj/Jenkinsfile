@@ -70,21 +70,19 @@ pipeline {
 }
 
     stage('Deploy Project to K8s') {
-      steps {
-        dir('indiaproj') {
-          echo 'Deploying Java project to Kubernetes'
-          bat '''
-            minikube start
-            kubectl apply -f k8s/deployment.yaml
-            kubectl apply -f k8s/services.yaml
-            kubectl get pods
-            kubectl get services
-          '''
-        }
-      }
+  steps {
+    dir('indiaproj') {
+      echo 'Deploying Java project to Kubernetes'
+      bat '''
+        kubectl apply -f k8s/deployment.yaml
+        kubectl apply -f k8s/services.yaml
+        kubectl get pods
+        kubectl get services
+      '''
     }
-
-  } // end stages
+  }
+}
+  } 
 
   post {
     success {
