@@ -19,78 +19,76 @@ pipeline {
 
     stage('Test Code') {
       steps {
-        dir('indiaproj') {
-          echo 'JUNIT Test case execution started'
-          bat 'mvn clean test'
-        }
+        echo 'JUNIT Test case execution started'
+        bat 'mvn clean test'
       }
       post {
         always {
-          junit 'indiaproj/target/surefire-reports/*.xml'
-          echo 'Test stage completed'
+          junit '**/target/surefire-reports/*.xml'
+          echo 'Test Run is SUCCESSFUL!'
         }
       }
     }
 
     stage('Build Project') {
       steps {
-        dir('indiaproj') {
-          echo 'Building Java project'
-          bat 'mvn clean package -DskipTests'
-        }
+        echo 'Building Java project'
+        bat 'mvn clean package -DskipTests'
       }
     }
 
-    stage('Build Docker Image') {
+    stage('Build the Docker Image') {
       steps {
-        dir('indiaproj') {
-          echo 'Building Docker Image'
-          bat 'docker build -t jayanthn1/indiaproj:1.0 .'
-        }
+        echo 'Building Docker Image'
+        bat 'docker build -t jayanthn1/indiaproj:1.0 .'
       }
     }
 
-   stage('Push Docker Image to DockerHub') {
-  steps {
-    echo 'Pushing Docker Image to DockerHub'
-
-    withCredentials([
-      usernamePassword(
-        credentialsId: 'Docker_id',
-        usernameVariable: 'DOCKER_USER',
-        passwordVariable: 'DOCKER_PASS'
-      )
-    ]) {
-      bat '''
-        echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-        docker push jayanthn1/indiaproj:1.0
-      '''
+    stage('Push Docker Image to DockerHub') {
+      steps {
+        echo 'Pushing Docker Image'
+        withCredentials([usernamePassword(
+          credentialsId: 'Docker_id',
+          usernameVariable: 'DOCKER_USER',
+          passwordVariable: 'DOCKER_PASS'
+        )]) {
+          bat '''
+            echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+            docker push jayanthn1/indiaproj:1.0
+          '''
+        }
+      }
     }
-  }
-}
 
     stage('Deploy Project to K8s') {
-  steps {
-    dir('indiaproj') {
-      echo 'Deploying Java project to Kubernetes'
-      bat '''
-        kubectl apply -f k8s/deployment.yaml
-        kubectl apply -f k8s/services.yaml
-        kubectl get pods
-        kubectl get services
-      '''
+      steps {
+        echo 'Deploy Java project to Kubernetes'
+        bat '''
+          minikube delete
+          minikube start
+          minikube image load jayanthn1/indiaproj:1.0
+
+          kubectl apply -f k8/deployment.yaml
+          kubectl apply -f k8/services.yaml
+
+          kubectl get pods
+          kubectl describe pods
+          kubectl get services
+
+          minikube addons enable dashboard
+          minikube dashboard
+        '''
+      }
     }
+
   }
-}
-  } 
 
   post {
     success {
-      echo 'BUILD & DEPLOY SUCCESSFUL'
+      echo 'Build and Run is SUCCESSFUL!'
     }
     failure {
-      echo 'OOPS!!! FAILURE '
+      echo 'OOPS!!! Failure.'
     }
   }
-
-} 
+}
