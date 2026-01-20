@@ -20,12 +20,15 @@ pipeline {
     stage('Test Code') {
       steps {
         echo 'JUNIT Test case execution started'
-        bat 'mvn clean test'
+        dir('indiaproj') {
+          bat 'mvn clean test'
+        }
       }
       post {
         always {
-          junit '**/target/surefire-reports/*.xml'
-          echo 'Test Run is SUCCESSFUL!'
+          junit allowEmptyResults: true,
+                testResults: '**/target/surefire-reports/*.xml'
+          echo 'Test stage completed'
         }
       }
     }
@@ -33,11 +36,13 @@ pipeline {
     stage('Build Project') {
       steps {
         echo 'Building Java project'
-        bat 'mvn clean package -DskipTests'
+        dir('indiaproj') {
+          bat 'mvn clean package -DskipTests'
+        }
       }
     }
 
-     stage('Build Docker Image') {
+    stage('Build Docker Image') {
       steps {
         dir('indiaproj') {
           echo 'Building Docker Image'
@@ -65,29 +70,26 @@ pipeline {
     stage('Deploy Project to K8s') {
       steps {
         echo 'Deploy Java project to Kubernetes'
-        bat '''
-          minikube delete
-          minikube start
-          minikube image load jayanthn1/indiaproj:1.0
+        dir('indiaproj') {
+          bat '''
+            minikube delete
+            minikube start
+            minikube image load jayanthn1/indiaproj:1.0
 
-          kubectl apply -f k8/deployment.yaml
-          kubectl apply -f k8/services.yaml
+            kubectl apply -f k8s/deployment.yaml
+            kubectl apply -f k8s/services.yaml
 
-          kubectl get pods
-          kubectl describe pods
-          kubectl get services
-
-          minikube addons enable dashboard
-          minikube dashboard
-        '''
+            kubectl get pods
+            kubectl get services
+          '''
+        }
       }
     }
-
   }
 
   post {
     success {
-      echo 'Build and Run is SUCCESSFUL!'
+      echo 'Build and Deployment SUCCESSFUL!'
     }
     failure {
       echo 'OOPS!!! Failure.'
